@@ -7,6 +7,7 @@ use Exception;
 class CompressLz4 implements CompressInterface
 {
     private $fileHandler;
+    private string $buffer = '';
     private int $compressionLevel;
 
     /**
@@ -17,7 +18,7 @@ class CompressLz4 implements CompressInterface
         if (!extension_loaded('lz4')) {
             throw new Exception('Compression is enabled, but lz4 extension is not installed or configured properly');
         }
-        
+
         // Ensure compression level is within valid range (1-12 for LZ4)
         $this->compressionLevel = max(1, min(12, $compressionLevel));
     }
@@ -33,13 +34,6 @@ class CompressLz4 implements CompressInterface
             throw new Exception('Output file is not writable');
         }
 
-        // Create an LZ4 compression context
-        $this->fileHandler = lz4_compress_open($this->fileHandler, $this->compressionLevel);
-
-        if (false === $this->fileHandler) {
-            throw new Exception('Failed to initialize LZ4 compression');
-        }
-
         return true;
     }
 
@@ -48,17 +42,25 @@ class CompressLz4 implements CompressInterface
      */
     public function write(string $str): int
     {
-        $bytesWritten = lz4_compress_write($this->fileHandler, $str);
-
-        if (false === $bytesWritten) {
-            throw new Exception('Writing to file failed! Probably, there is no more free space left?');
-        }
-
-        return $bytesWritten;
+        $this->buffer .= $str;
+        return strlen($str);
     }
 
     public function close(): bool
     {
-        return lz4_compress_close($this->fileHandler);
+        if (empty($this->buffer)) {
+            return true;
+        }
+
+        $compressed = lz4_compress($this->buffer, $this->compressionLevel);
+
+        if ($compressed === false) {
+            return false;
+        }
+
+        $bytesWritten = fwrite($this->fileHandler, $compressed);
+        $result = fclose($this->fileHandler);
+
+        return ($bytesWritten !== false) && $result;
     }
 }

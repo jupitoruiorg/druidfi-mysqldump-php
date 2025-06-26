@@ -7,6 +7,7 @@ use Exception;
 class CompressZstd implements CompressInterface
 {
     private $fileHandler;
+    private string $buffer = '';
     private int $compressionLevel;
 
     /**
@@ -17,7 +18,7 @@ class CompressZstd implements CompressInterface
         if (!extension_loaded('zstd')) {
             throw new Exception('Compression is enabled, but zstd extension is not installed or configured properly');
         }
-        
+
         // Ensure compression level is within valid range (1-22 for zstd)
         $this->compressionLevel = max(1, min(22, $compressionLevel));
     }
@@ -33,9 +34,6 @@ class CompressZstd implements CompressInterface
             throw new Exception('Output file is not writable');
         }
 
-        // Create a zstd compression context with the specified compression level
-        $this->fileHandler = zstd_compress_stream_begin($this->fileHandler, $this->compressionLevel);
-
         return true;
     }
 
@@ -44,18 +42,25 @@ class CompressZstd implements CompressInterface
      */
     public function write(string $str): int
     {
-        $bytesWritten = zstd_compress_stream_update($this->fileHandler, $str);
-
-        if (false === $bytesWritten) {
-            throw new Exception('Writing to file failed! Probably, there is no more free space left?');
-        }
-
-        return $bytesWritten;
+        $this->buffer .= $str;
+        return strlen($str);
     }
 
     public function close(): bool
     {
-        $result = zstd_compress_stream_end($this->fileHandler);
-        return $result !== false;
+        if (empty($this->buffer)) {
+            return true;
+        }
+
+        $compressed = zstd_compress($this->buffer, $this->compressionLevel);
+
+        if ($compressed === false) {
+            return false;
+        }
+
+        $bytesWritten = fwrite($this->fileHandler, $compressed);
+        $result = fclose($this->fileHandler);
+
+        return ($bytesWritten !== false) && $result;
     }
 }
