@@ -12,6 +12,7 @@ class TypeAdapterMysql implements TypeAdapterInterface
 
     protected PDO $db;
     protected DumpSettings $settings;
+    protected string $databaseName;
 
     // Numerical Mysql types
     public array $mysqlTypes = [
@@ -52,6 +53,8 @@ class TypeAdapterMysql implements TypeAdapterInterface
     {
         $this->db = $conn;
         $this->settings = $settings;
+
+        $this->databaseName = $this->db->query('SELECT DATABASE()')->fetchColumn();
 
         // Execute init commands once connected
         foreach ($this->settings->getInitCommands() as $stmt) {
@@ -150,6 +153,8 @@ class TypeAdapterMysql implements TypeAdapterInterface
         }
 
         $viewStmt = $row['Create View'];
+
+        $viewStmt = str_replace("`{$this->databaseName}`.", '', $viewStmt);
 
         $definerStr = $this->settings->skipDefiner() ? '' : '/*!50013 \2 */' . PHP_EOL;
 
