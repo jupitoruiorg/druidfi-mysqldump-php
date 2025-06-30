@@ -41,6 +41,8 @@ class DumpSettings
         'single-transaction' => true,
         'skip-triggers' => false,
         'skip-tz-utc' => false,
+        'with-views' => false,
+        'skip-tables' => false,
         'skip-comments' => false,
         'skip-dump-date' => false,
         'skip-definer' => false,

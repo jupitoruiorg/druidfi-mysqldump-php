@@ -237,6 +237,10 @@ class Mysqldump
      */
     private function getDatabaseStructureTables()
     {
+        if (true === $this->settings->isEnabled('skip-tables')) {
+            return;
+        }
+
         $includedTables = $this->settings->getIncludedTables();
 
         // Listing all tables from database
@@ -263,24 +267,32 @@ class Mysqldump
      */
     private function getDatabaseStructureViews()
     {
-        $includedViews = $this->settings->getIncludedViews();
-
-        // Listing all views from database
-        if (empty($includedViews)) {
-            // include all views for now, blacklisting happens later
-            foreach ($this->conn->query($this->db->showViews($this->connector->getDbName())) as $row) {
-                $this->views[] = current($row);
-            }
-        } else {
-            // include only the tables mentioned in include-tables
-            foreach ($this->conn->query($this->db->showViews($this->connector->getDbName())) as $row) {
-                if (in_array(current($row), $includedViews, true)) {
-                    $this->views[] = current($row);
-                    $elem = array_search(current($row), $includedViews);
-                    unset($includedViews[$elem]);
-                }
-            }
+        if (false === $this->settings->isEnabled('with-views')) {
+            return;
         }
+
+        foreach ($this->conn->query($this->db->showViews($this->connector->getDbName())) as $row) {
+            $this->views[] = current($row);
+        }
+
+        //$includedViews = $this->settings->getIncludedViews();
+        //
+        //// Listing all views from database
+        //if (empty($includedViews)) {
+        //    // include all views for now, blacklisting happens later
+        //    foreach ($this->conn->query($this->db->showViews($this->connector->getDbName())) as $row) {
+        //        $this->views[] = current($row);
+        //    }
+        //} else {
+        //    // include only the tables mentioned in include-tables
+        //    foreach ($this->conn->query($this->db->showViews($this->connector->getDbName())) as $row) {
+        //        if (in_array(current($row), $includedViews, true)) {
+        //            $this->views[] = current($row);
+        //            $elem = array_search(current($row), $includedViews);
+        //            unset($includedViews[$elem]);
+        //        }
+        //    }
+        //}
     }
 
     /**
@@ -360,6 +372,10 @@ class Mysqldump
      */
     private function exportTables()
     {
+        if (true === $this->settings->isEnabled('skip-tables')) {
+            return;
+        }
+
         // Exporting tables one by one
         foreach ($this->tables as $table) {
             if ($this->matches($table, $this->settings->getExcludedTables())) {
@@ -384,25 +400,41 @@ class Mysqldump
      */
     private function exportViews()
     {
-        if (false === $this->settings->isEnabled('no-create-info')) {
-            // Exporting views one by one
-            foreach ($this->views as $view) {
-                if ($this->matches($view, $this->settings->getExcludedTables())) {
-                    continue;
-                }
-
-                $this->tableColumnTypes[$view] = $this->getTableColumnTypes($view);
-                $this->getViewStructureTable($view);
-            }
-
-            foreach ($this->views as $view) {
-                if ($this->matches($view, $this->settings->getExcludedTables())) {
-                    continue;
-                }
-
-                $this->getViewStructureView($view);
-            }
+        if(true === $this->settings->isEnabled('no-create-info')) {
+            return;
         }
+
+        if (false === $this->settings->isEnabled('with-views')) {
+            return;
+        }
+
+        foreach ($this->views as $view) {
+            if ($this->matches($view, $this->settings->getExcludedTables())) {
+                continue;
+            }
+
+            $this->getViewStructureView($view);
+        }
+
+        //if (false === $this->settings->isEnabled('no-create-info')) {
+        //    // Exporting views one by one
+        //    foreach ($this->views as $view) {
+        //        if ($this->matches($view, $this->settings->getExcludedTables())) {
+        //            continue;
+        //        }
+        //
+        //        $this->tableColumnTypes[$view] = $this->getTableColumnTypes($view);
+        //        $this->getViewStructureTable($view);
+        //    }
+        //
+        //    foreach ($this->views as $view) {
+        //        if ($this->matches($view, $this->settings->getExcludedTables())) {
+        //            continue;
+        //        }
+        //
+        //        $this->getViewStructureView($view);
+        //    }
+        //}
     }
 
     /**
