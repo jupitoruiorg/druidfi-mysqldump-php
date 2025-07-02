@@ -275,6 +275,8 @@ class Mysqldump
             $this->views[] = current($row);
         }
 
+        $this->reorderViews();
+
         //$includedViews = $this->settings->getIncludedViews();
         //
         //// Listing all views from database
@@ -293,6 +295,27 @@ class Mysqldump
         //        }
         //    }
         //}
+    }
+
+    protected function reorderViews(): void
+    {
+        // List of views to move
+        $toMove = ['py_pre_batch_process', 'py_tax', 'py_tax_exists'];
+
+        // Remove views that need to be moved from the original list
+        $filtered = array_values(array_filter(
+            $this->views,
+            fn($v) => !in_array($v, $toMove, true)
+        ));
+
+        // Append views in specific order if they exist in the original list
+        foreach (['py_tax_exists', 'py_tax', 'py_pre_batch_process'] as $item) {
+            if (in_array($item, $this->views, true)) {
+                $filtered[] = $item;
+            }
+        }
+
+        $this->views = $filtered;
     }
 
     /**
