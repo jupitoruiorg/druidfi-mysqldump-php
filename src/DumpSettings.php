@@ -36,6 +36,7 @@ class DumpSettings
         'net_buffer_length' => 1000000,
         'no-autocommit' => true,
         'no-create-info' => false,
+        'tables-no-data' => false,
         'lock-tables' => true,
         'routines' => false,
         'single-transaction' => true,
