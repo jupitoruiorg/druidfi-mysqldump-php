@@ -133,7 +133,12 @@ class DatabaseConnector
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 // Don't convert empty strings to SQL NULL values on data fetches.
                 PDO::ATTR_ORACLE_NULLS => PDO::NULL_NATURAL,
-                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false,
+                // PDO::MYSQL_ATTR_* is deprecated since PHP 8.5 in favour of the
+                // Pdo\Mysql::ATTR_* constants introduced in 8.4; the package still
+                // supports php ^8.1, so resolve whichever one this runtime has.
+                // gdpr-dump turns every deprecation into an ErrorException, so the
+                // old name is a hard failure there, not a notice.
+                self::bufferedQueryAttribute() => false,
             ], $this->pdoOptions);
 
             $this->conn = new PDO($this->dsn, $this->user, $this->pass, $options);
@@ -143,6 +148,20 @@ class DatabaseConnector
         }
 
         return $this->conn;
+    }
+
+    /**
+     * The "use buffered query" PDO attribute for the running PHP version.
+     *
+     * @return int
+     */
+    private static function bufferedQueryAttribute(): int
+    {
+        if (defined('Pdo\\Mysql::ATTR_USE_BUFFERED_QUERY')) {
+            return constant('Pdo\\Mysql::ATTR_USE_BUFFERED_QUERY');
+        }
+
+        return PDO::MYSQL_ATTR_USE_BUFFERED_QUERY;
     }
 
     /**
